@@ -167,12 +167,23 @@ def _ensure_bucket(s3_conn, bucket):
         botocore.exceptions.ClientError: any error from boto3 is passed
             through.
     """
+
+    if s3_conn.meta.region_name == 'us-east-1':
+        location = ''
+    else:
+        location = self.region
+
     try:
         s3_conn.head_bucket(Bucket=bucket)
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == '404':
             logger.info('Creating bucket %s.', bucket)
-            s3_conn.create_bucket(Bucket=bucket)
+            s3_conn.create_bucket(
+                Bucket=bucket,
+                CreateBucketConfiguration={
+                    'LocationConstraint': location
+                }
+            )
         elif e.response['Error']['Code'] in ('401', '403'):
             logger.exception('Access denied for bucket %s.', bucket)
             raise
@@ -412,6 +423,7 @@ def upload_lambda_functions(context, provider, **kwargs):
         bucket = context.bucket_name
         logger.info('lambda: using default bucket from stacker: %s', bucket)
     else:
+        bucket = "{0}-{1}".format(bucket, provider.region)
         logger.info('lambda: using custom bucket: %s', bucket)
 
     session = get_session(provider.region)
