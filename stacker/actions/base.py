@@ -74,7 +74,12 @@ class BaseAction(object):
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Message'] == "Not Found":
                 logger.debug("Creating bucket %s.", self.bucket_name)
-                self.s3_conn.create_bucket(Bucket=self.bucket_name)
+                self.s3_conn.create_bucket(
+                    Bucket=self.bucket_name,
+                    CreateBucketConfiguration={
+                        "LocationConstraint": self.s3_conn.meta.region_name
+                    }
+                )
             elif e.response['Error']['Message'] == "Forbidden":
                 logger.exception("Access denied for bucket %s.",
                                  self.bucket_name)
